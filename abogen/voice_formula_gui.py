@@ -16,6 +16,7 @@ from PyQt5.QtWidgets import (
     QFrame,
     QLayout,
     QStyle,
+    QStyleOption,
     QListWidget,
     QListWidgetItem,
     QInputDialog,
@@ -27,7 +28,7 @@ from PyQt5.QtWidgets import (
     QApplication,
 )
 from PyQt5.QtCore import Qt, QTimer, QPoint, QRect, QSize
-from PyQt5.QtGui import QPixmap, QIcon
+from PyQt5.QtGui import QPixmap, QIcon, QPainter
 from abogen.constants import (
     VOICES_INTERNAL,
     SUPPORTED_LANGUAGES_FOR_SUBTITLE_GENERATION,
@@ -157,6 +158,13 @@ class FlowLayout(QLayout):
 
 
 class VoiceMixer(QWidget):
+    ROUNDED_CSS = f"""
+        #VoiceMixer {{
+            background-color: {COLORS.get("GREY_BACKGROUND")};
+            border-radius: 8px;
+        }}
+    """
+
     def __init__(
         self, voice_name, language_code, initial_status=False, initial_weight=0.0
     ):
@@ -165,9 +173,9 @@ class VoiceMixer(QWidget):
         self.setFixedWidth(VOICE_MIXER_WIDTH)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        # TODO Set CSS for rounded corners
-        # self.setObjectName("VoiceMixer")
-        # self.setStyleSheet(self.ROUNDED_CSS)
+        # Set CSS for rounded corners
+        self.setObjectName("VoiceMixer")
+        self.setStyleSheet(self.ROUNDED_CSS)
 
         layout = QVBoxLayout()
 
@@ -275,6 +283,12 @@ class VoiceMixer(QWidget):
         if self.checkbox.isChecked():
             return self.voice_name, self.spin_box.value()
         return None
+
+    def paintEvent(self, event):
+        opt = QStyleOption()
+        opt.initFrom(self)
+        p = QPainter(self)
+        self.style().drawPrimitive(QStyle.PE_Widget, opt, p, self)
 
 
 class HoverLabel(QLabel):
