@@ -3230,6 +3230,8 @@ Categories=AudioVideo;Audio;Utility;
 
     def check_for_updates_startup(self):
         import urllib.request
+        import ssl
+        import re
 
         def show_update_message(remote_version, local_version):
             msg_box = QMessageBox(self)
@@ -3261,32 +3263,35 @@ Categories=AudioVideo;Audio;Utility;
         self._show_update_check_result = False
 
         try:
+            # Enforce TLS verification using default context
+            context = ssl.create_default_context()
             update_url = "https://raw.githubusercontent.com/denizsafak/abogen/refs/heads/main/abogen/VERSION"
-            with urllib.request.urlopen(update_url) as response:
+            with urllib.request.urlopen(
+                update_url, context=context, timeout=10
+            ) as response:
                 remote_raw = response.read().decode().strip()
+
+            # Security: Validate the version string format using regex (e.g., 1.2.3)
+            if not re.match(r"^\d+\.\d+\.\d+$", remote_raw):
+                raise ValueError(f"Invalid remote version format: {remote_raw}")
+
             local_raw = VERSION
 
-            # Parse version numbers
-            remote_version = remote_raw
-            local_version = local_raw
+            # Secure version comparison: compare as tuples of integers
+            def parse_version(v):
+                return tuple(map(int, v.split(".")))
 
-            try:
-                remote_num = int("".join(remote_version.split(".")))
-                local_num = int("".join(local_version.split(".")))
-            except ValueError as ve:
-                return
-
-            if remote_num > local_num:
+            if parse_version(remote_raw) > parse_version(local_raw):
                 # Use QTimer to ensure UI is ready, then show update message.
                 QTimer.singleShot(
-                    1000, lambda: show_update_message(remote_version, local_version)
+                    1000, lambda: show_update_message(remote_raw, local_raw)
                 )
             elif show_result:
                 # Show "no updates" message if manually checking
                 QMessageBox.information(
                     self,
                     "Up to Date",
-                    f"You are running the latest version of {PROGRAM_NAME} ({local_version}).",
+                    f"You are running the latest version of {PROGRAM_NAME} ({local_raw}).",
                 )
         except Exception as e:
             if show_result:
